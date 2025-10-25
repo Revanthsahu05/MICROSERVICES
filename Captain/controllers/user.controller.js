@@ -2,12 +2,13 @@ const usermodel = require("../models/user.model");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const blacklistModel = require("../models/blacklisttoken.model");
-module.exports.registerUser = async (req, res) => {
+
+const registerCaptain = async (req, res) => {
   try {
     const { name, email, password } = req.body;
     const existingUser = await usermodel.findOne({ email });
     if (existingUser) {
-      return res.status(400).json({ message: "User already exists" });
+      return res.status(400).json({ message: "Captain already exists" });
     }
     const hashedPassword = await bcrypt.hash(password, 10);
     const newUser = new usermodel({
@@ -20,12 +21,13 @@ module.exports.registerUser = async (req, res) => {
       expiresIn: "1h",
     });
     res.cookie("token", token);
-    res.status(201).json({ message: "User registered successfully" });
+    res.status(201).json({ message: "Captain registered successfully" });
   } catch (error) {
     res.status(500).json({ message: "Internal server error" });
   }
 };
-module.exports.loginUser = async (req, res) => {
+
+const loginCaptain = async (req, res) => {
   try {
     const { email, password } = req.body;
     const user = await usermodel.findOne({ email });
@@ -42,13 +44,13 @@ module.exports.loginUser = async (req, res) => {
     const userobject = user.toObject();
     delete userobject.password;
     res.cookie("token", token);
-    // res.status(200).json({ message: "Login successful" });
     res.send({ token, user: userobject });
   } catch (error) {
     res.status(500).json({ message: "Internal server error" });
   }
 };
-module.exports.logoutUser = async (req, res) => {
+
+const logoutCaptain = async (req, res) => {
   try {
     const token = req.cookies.token;
     if (!token) {
@@ -70,16 +72,38 @@ module.exports.logoutUser = async (req, res) => {
     res.status(500).json({ message: "Internal server error" });
   }
 };
-module.exports.getUserProfile = async (req, res) => {
+
+const getCaptainProfile = async (req, res) => {
+  // console.log("Fetching captain profile for userId:", req.userId);
   try {
     const userId = req.userId;
-
     const user = await usermodel.findById(userId).select("-password");
     if (!user) {
-      return res.status(404).json({ message: "User not found" });
+      return res.status(404).json({ message: "Captain not found" });
     }
     res.status(200).json({ user });
   } catch (error) {
     res.status(500).json({ message: "Internal server error" });
   }
+};
+const toggleAvailability = async (req, res) => {
+  try {
+    const userId = req.userId;
+    const user = await usermodel.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: "Captain not found" });
+    }
+    user.isAvailable = !user.isAvailable;
+    await user.save();
+    res.status(200).json({ message: "Availability status updated", isAvailable: user.isAvailable });
+  } catch (error) {
+    res.status(500).json({ message: "Internal server error" });
+  }
+};
+module.exports = {
+  registerCaptain,
+  loginCaptain,
+  logoutCaptain,
+  getCaptainProfile,
+  toggleAvailability,
 };
